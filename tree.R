@@ -1,3 +1,5 @@
+source("node.R")
+
 TREE <- function()
 {
         data <- list(
