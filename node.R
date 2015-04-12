@@ -1,5 +1,5 @@
-library(entropy)
-library(nnet)
+library(entropy) 
+library(nnet) 
 
 NODE <- function(...)
 {
@@ -9,8 +9,8 @@ NODE <- function(...)
             s.l = 0,
             s.r = 0,
             s = c(),
-            h = 0,
-            h.i = c()
+            h = list(),
+            h.i = list()
        )
 
         ## Set the name for the class
@@ -46,15 +46,15 @@ split.node.NODE <- function(...){
     object <- args[["object"]]
 
     s <- object$s 
-	lvls <- levels(s$l)
 
     rez <- list()
-    for (i in unique(s$l)) {
-		type = s$l == lvls[i]
+    for (i in levels(s$l)) {
+		type <- s$l == i
 		nnet.fit <- nnet(type ~ ., data = s[,!names(s) %in% c("l")], size = 1)
-		nnet.pred <- predict(nnet.fit, s[,!names(s) %in% c("l") ])
-
-        rez[[i]] <- list(nnet.fit, nnet.pred, type)
+		nnet.pred <- predict(nnet.fit, s[,!names(s) %in% c("l") ], type = "raw")
+        rez[[i]] <- list("net.fit" = nnet.fit, 
+                         "net.pred" = nnet.pred, 
+                         "class" = type)
     }
     object$h.i <- rez
     return(object)
@@ -67,9 +67,27 @@ eval.splits.NODE <- function(...) {
   
     L <- object$h.i
     labels <- names(L)
-    nnet.fit <- sapply(L,"[[","nnet.fit")
-    nnet.pred<- sapply(L,"[[","nnet.pred")
+    nnet.fit <- lapply(L,"[[","net.fit")
+    nnet.pred<- lapply(L,"[[","net.pred")
+    nnet.pred<- lapply(nnet.pred, round)
 
     score <- sapply(nnet.pred, entropy.empirical)
-    nnet.fit[order(score)]
+    object$h <- list("order" = nnet.fit[order(score)],
+                     "score" = score)
+    return(object)
+}
+
+sample <- function(...){
+    args <- list(...)
+
+    #tmp.df <- read.csv("nt_tester.csv")
+    tmp.df <- iris
+    colnames(tmp.df)[5] <- "l"
+
+    n <- NODE()
+    n <- set.node(object = n, s = tmp.df)
+    n <- split.node(object = n)
+
+    n <- eval.splits(object = n)
+    return(n)
 }
