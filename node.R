@@ -36,15 +36,6 @@ init.split.node.NODE <- function(...){
     args <- list(...)
     object <- args[["object"]]
 
-    object$h.i <- unique(object$s[,"l"])
-    return(object)
-}
-
-split.node <- function(...) UseMethod("split.node")
-split.node.NODE <- function(...){
-    args <- list(...)
-    object <- args[["object"]]
-
     s <- object$s 
 
     rez <- list()
@@ -72,8 +63,21 @@ eval.splits.NODE <- function(...) {
     nnet.pred<- lapply(nnet.pred, round)
 
     score <- sapply(nnet.pred, entropy.empirical)
-    object$h <- list("order" = nnet.fit[order(score)],
+    object$h <- list("order" = nnet.fit[order(score, decreasing = TRUE)],
                      "score" = score)
+    return(object)
+}
+
+split.node <- function(...) UseMethod("split.node")
+split.node.NODE <- function(...){
+    args <- list(...)
+    object <- args[["object"]]
+
+    top <- names(object$h$order)[[1]]
+    candidates <- object$h.i[[top]][[3]]
+    object$s.l <- object$s[candidates,]
+    object$s.r <- object$s[-candidates,]
+
     return(object)
 }
 
@@ -86,8 +90,9 @@ sample <- function(...){
 
     n <- NODE()
     n <- set.node(object = n, s = tmp.df)
-    n <- split.node(object = n)
+    n <- init.split.node(object = n)
 
     n <- eval.splits(object = n)
+    n <- split.node(object = n)
     return(n)
 }
