@@ -20,7 +20,7 @@ NODE <- function(...)
 
 set.node <- function(...) UseMethod("set.node")
 set.node.NODE <- function(...){
-    args <- list(...)
+    args   <- list(...)
     object <- args[["object"]] 
 
     within(object,{
@@ -33,55 +33,73 @@ set.node.NODE <- function(...){
 
 init.split.node <- function(...) UseMethod("init.split.node")
 init.split.node.NODE <- function(...){
-    args <- list(...)
+    args   <- list(...)
     object <- args[["object"]]
 
     s <- object$s 
 
     rez <- list()
     for (i in levels(s$l)) {
-		type <- s$l == i
-		nnet.fit <- nnet(type ~ ., data = s[,!names(s) %in% c("l")], size = 1)
+		type      <- (s$l == i)
+		nnet.fit  <- nnet(type ~ ., data = s[,!names(s) %in% c("l")], size = 1)
 		nnet.pred <- predict(nnet.fit, s[,!names(s) %in% c("l") ], type = "raw")
-        rez[[i]] <- list("net.fit" = nnet.fit, 
-                         "net.pred" = nnet.pred, 
-                         "classj" = type)
+        rez[[i]]  <- list("net.fit"  = nnet.fit, 
+                          "net.pred" = nnet.pred, 
+                          "classj"   = type)
     }
     object$h.i <- rez
     return(object)
 }
 
+s.entropy <- function(...) {
+    args <- list(...)
+    df <- args[["df"]]
+    x  <- args[["subset"]]
+
+    p <- sum(x)
+    n <- length(x)
+    return(p/n *entropy.empirical(table(df[x, "l"]), unit = "log2"))
+}
+
 eval.splits <- function(...) UseMethod("eval.splits")
 eval.splits.NODE <- function(...) { 
-    args <- list(...)
+    args  <- list(...)
     object <- args[["object"]]
   
-    L <- object$h.i
-    labels <- names(L)
-    nnet.fit <- lapply(L,"[[","net.fit")
-    nnet.pred<- lapply(L,"[[","net.pred")
+    L          <- object$h.i
+    labels     <- names(L)
+
+    nnet.fit   <- lapply(L,"[[","net.fit")
+    nnet.pred  <- lapply(L,"[[","net.pred")
     candidates <- lapply(nnet.pred, function(x) round(x) == 1)
 
-    h.s.r <- sapply(candidates, function(x) entropy.empirical(table(object$s[x, "l"]), unit = "log2"))
-    h.s.l <- sapply(candidates, function(x) entropy.empirical(table(object$s[x, "l"]), unit = "log2"))
-    h.s <- entropy.empirical(table(object$s[,"l"]), unit = "log2")
-    delta.h.s <- h.s - h.s.l + h.s.r
+    h.s.r <- sapply(candidates, function(x) s.entropy(df = object$s, subset = x))
+    h.s.l <- sapply(candidates, function(x) s.entropy(df = object$s, subset = !x))
+    h.s   <- s.entropy(object = object$s, subset = rep(1, nrow(object$s))==1)
+    delta.h.s <- h.s + h.s.l - h.s.r
 
     rank <- order(delta.h.s, decreasing = TRUE)
     object$h <- list("nets"       = nnet.fit[rank],
                      "candidates" = candidates[rank],
-                     "delta.h.s"  = delta.h.s[rank])
+                     "delta.h.s"  = delta.h.s[rank],
+                     "h.s.r"      = h.s.r[rank],
+                     "h.s.l"      = h.s.l[rank])
+                    
     return(object)
 }
 
 split.node <- function(...) UseMethod("split.node")
 split.node.NODE <- function(...){
-    args <- list(...)
+    args   <- list(...)
     object <- args[["object"]]
 
     candidates <- object$h$candidates[[1]]
-    object$s.r <- candidates
-    object$s.l <- !candidates
+    object$s.r <- list("candidates" = candidates,
+                       "s" = object$s[candidates, ],
+                       "h" = object$h$h.s.r[[1]])
+    object$s.l <- list("candidates" = !candidates,
+                       "s" = object$s[-candidates, ],
+                       "h" = object$h$h.s.l[[1]])
     return(object)
 }
 
