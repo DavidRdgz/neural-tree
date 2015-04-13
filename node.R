@@ -79,11 +79,9 @@ split.node.NODE <- function(...){
     args <- list(...)
     object <- args[["object"]]
 
-    top <- names(object$h$order)[[1]]
-    candidates <- object$h.i[[top]][["classj"]]
-    object$s.l <- object$s[candidates,]
-    object$s.r <- object$s[-candidates,]
-
+    candidates <- object$h$candidates[[1]]
+    object$s.r <- candidates
+    object$s.l <- !candidates
     return(object)
 }
 
@@ -98,19 +96,6 @@ sample <- function(...){
     n <- init.split.node(object = n)
 
     n <- eval.splits(object = n)
-    #n <- split.node(object = n)
-    return(n)
-}
-
-sample2 <- function(...){
-    args <- list(...)
-
-    tmp.df <- iris
-    colnames(tmp.df)[5] <- "l"
-
-    n <- NODE()
-    n <- set.node(object = n, s = tmp.df)
-    n <- init.split.node2(object = n)
-    n <- eval.splits2(object = n)
+    n <- split.node(object = n)
     return(n)
 }
