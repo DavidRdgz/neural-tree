@@ -45,7 +45,7 @@ init.split.node.NODE <- function(...){
 		nnet.pred <- predict(nnet.fit, s[,!names(s) %in% c("l") ], type = "raw")
         rez[[i]] <- list("net.fit" = nnet.fit, 
                          "net.pred" = nnet.pred, 
-                         "class" = type)
+                         "classj" = type)
     }
     object$h.i <- rez
     return(object)
@@ -60,11 +60,17 @@ eval.splits.NODE <- function(...) {
     labels <- names(L)
     nnet.fit <- lapply(L,"[[","net.fit")
     nnet.pred<- lapply(L,"[[","net.pred")
-    nnet.pred<- lapply(nnet.pred, round)
+    candidates <- lapply(nnet.pred, function(x) round(x) == 1)
 
-    score <- sapply(nnet.pred, entropy.empirical)
-    object$h <- list("order" = nnet.fit[order(score, decreasing = TRUE)],
-                     "score" = score)
+    h.s.r <- sapply(candidates, function(x) entropy.empirical(table(object$s[x, "l"]), unit = "log2"))
+    h.s.l <- sapply(candidates, function(x) entropy.empirical(table(object$s[x, "l"]), unit = "log2"))
+    h.s <- entropy.empirical(table(object$s[,"l"]), unit = "log2")
+    delta.h.s <- h.s - h.s.l + h.s.r
+
+    rank <- order(delta.h.s, decreasing = TRUE)
+    object$h <- list("nets"       = nnet.fit[rank],
+                     "candidates" = candidates[rank],
+                     "delta.h.s"  = delta.h.s[rank])
     return(object)
 }
 
@@ -74,7 +80,7 @@ split.node.NODE <- function(...){
     object <- args[["object"]]
 
     top <- names(object$h$order)[[1]]
-    candidates <- object$h.i[[top]][[3]]
+    candidates <- object$h.i[[top]][["classj"]]
     object$s.l <- object$s[candidates,]
     object$s.r <- object$s[-candidates,]
 
@@ -84,7 +90,6 @@ split.node.NODE <- function(...){
 sample <- function(...){
     args <- list(...)
 
-    #tmp.df <- read.csv("nt_tester.csv")
     tmp.df <- iris
     colnames(tmp.df)[5] <- "l"
 
@@ -93,6 +98,19 @@ sample <- function(...){
     n <- init.split.node(object = n)
 
     n <- eval.splits(object = n)
-    n <- split.node(object = n)
+    #n <- split.node(object = n)
+    return(n)
+}
+
+sample2 <- function(...){
+    args <- list(...)
+
+    tmp.df <- iris
+    colnames(tmp.df)[5] <- "l"
+
+    n <- NODE()
+    n <- set.node(object = n, s = tmp.df)
+    n <- init.split.node2(object = n)
+    n <- eval.splits2(object = n)
     return(n)
 }
