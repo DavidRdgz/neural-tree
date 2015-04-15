@@ -1,43 +1,84 @@
-source("node.R")
+source("node2.R")
+source("queue.R")
 
-TREE <- function()
-{
-        data <- list(
-            tree= list(),
-            root = 0,
-            leaves = 0
-       )
+Tree <- setRefClass(Class = "Tree",
+                    fields = list(
+                                  tree= "list",
+                                  queue = "Queue" 
+                                  ),
+                    methods = list(
+                                   grow = function(...){
+                                       args <- list(...)
 
-        ## Set the name for the class
-        class(data) <- append(class(data),"TREE")
-        return(data)
-}
+                                       iter <- iter(cur.val = 1)
+                                       while (length(queue$items) > 0 ){
+                                           tmp <- queue$pop()
+                                           s.tmp <- tmp[[1]]
+                                           id.tmp  <- tmp[[2]]
+                                           p.id.tmp  <- tmp[[3]]
 
-add.node <- function(...) UseMethod("add.node")
-add.node.TREE <- function(...){
-    args <- list(...)
-    object <- args[["object"]]
-    id <- args[["id"]]
-    object$tree[[args[["id"]]]] <- args[["node"]]
-    #object$tree <- c(object$tree, list(id = args[["node"]]))
-    return(object) 
-}
+                                           n <- Node(id = id.tmp, parent = p.id.tmp, s = s.tmp$s)
+
+                                           if (n$init.split(n$s)) {
+                                               n$init.splits()
+                                               n$eval.splits()
+                                               n$split()
+
+                                               tree <<- append(tree, n)
+
+                                               if (nrow(n$s.r$s) > 0) {
+                                                   queue$push(list(n$s.r, iter$inc(), id.tmp))
+                                               }
+                                               if (nrow(n$s.l$s) > 0) {
+                                                   queue$push(list(n$s.l, iter$inc(), id.tmp))
+                                               }
+                                           } else {
+                                               tree <<- append(tree, n)
+                                           }
+                                       }
+
+                                   },
+                                   peek = function(...) {
+                                       length(tree)
+                                   },
+                                   initialize = function(...) {
+                                       callSuper(...)
+                                       #
+                                       # Initialise fields here (place holder)...
+                                       #
+                                       .self
+                                   }
+                                   )
+                    )
+
+iter <- setRefClass(Class = "iter",
+                    fields = list(
+                                  cur.val = "numeric"
+                                  ),
+                    methods = list(
+                                   inc = function(...){
+                                       previous <- cur.val
+                                       cur.val <<- previous + 1
+                                       return(previous)
+                                   },
+                                   initialize = function(...) {
+                                       callSuper(...)
+                                       .self
+                                   }
+                                   )
+                    )
 
 sample <- function(){
-    a <- NODE()
-    a <- set.node(object = a, id = "A", l.child = "B", r.child = "C", 
-                  content = list(value = 1))
-    b <- NODE()
-    b <- set.node(object = b, id = "B", content = list(value = -1))
-    c <- NODE()
-    c <- set.node(object = c, id = "C", content = list(value = 1))
+    tmp.df <- iris
+    colnames(tmp.df)[5] <- "l"
 
-    t <- TREE()
-    t <- add.node(object = t, id = a$id, node = a)
-    t <- add.node(object = t, id = b$id, node = b)
-    t <- add.node(object = t, id = c$id, node = c)
-    return(t)
+    q <- Queue(items = list(list(list(s = tmp.df), 1, 0)))
+    t <- Tree(tree = list(), queue= q)
+
+    t$grow()
+    t
 }
+
 
 
 
