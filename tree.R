@@ -1,4 +1,4 @@
-source("node2.R")
+source("node.R")
 source("queue.R")
 
 Tree <- setRefClass(Class = "Tree",
@@ -43,9 +43,6 @@ Tree <- setRefClass(Class = "Tree",
                                    },
                                    initialize = function(...) {
                                        callSuper(...)
-                                       #
-                                       # Initialise fields here (place holder)...
-                                       #
                                        .self
                                    }
                                    )
