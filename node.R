@@ -79,9 +79,6 @@ Node <- setRefClass(Class = "Node",
                                    },
                                    initialize = function(...) {
                                        callSuper(...)
-                                       #
-                                       # Initialise fields here (place holder)...
-                                       #
                                        .self
                                    }
                                    )
