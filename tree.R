@@ -12,14 +12,14 @@ Tree <- setRefClass(Class = "Tree",
 
                                        iter <- iter(cur.val = 1)
                                        while (length(queue$items) > 0 ){
-                                           tmp <- queue$pop()
-                                           s.tmp <- tmp[[1]]
-                                           id.tmp  <- tmp[[2]]
+                                           tmp       <- queue$pop()
+                                           s.tmp     <- tmp[[1]]
+                                           id.tmp    <- tmp[[2]]
                                            p.id.tmp  <- tmp[[3]]
 
                                            n <- Node(id = id.tmp, parent = p.id.tmp, s = s.tmp$s)
 
-                                           if (n$init.split(n$s)) {
+                                           if (n$init.split()) {
                                                n$init.splits()
                                                n$eval.splits()
                                                n$split()
@@ -40,6 +40,13 @@ Tree <- setRefClass(Class = "Tree",
                                    },
                                    peek = function(...) {
                                        length(tree)
+                                   },
+                                   spine.labels = function(...) {
+                                       tmp <- lapply(tree, function(x) names(x$h$delta.h.s[1]))
+                                   },
+                                   leaf.labels = function(...) {
+                                       tmp <- lapply(tree, function(x) names(x$h$delta.h.s[1]))
+                                       lapply(tree[tmp], function(x) table(x$s$l))
                                    },
                                    initialize = function(...) {
                                        callSuper(...)
@@ -65,11 +72,45 @@ iter <- setRefClass(Class = "iter",
                                    )
                     )
 
-sample <- function(){
-    tmp.df <- iris
-    colnames(tmp.df)[5] <- "l"
+sample2 <- function(){
+    df <- iris
+    colnames(df)[5] <- "l"
 
-    q <- Queue(items = list(list(list(s = tmp.df), 1, 0)))
+    q <- Queue(items = list(
+                            list(
+                                 list(s = df),
+                                 1,
+                                 0
+                                 )
+                            )
+              )
+
+    t <- Tree(tree = list(), queue= q)
+
+    t$grow()
+    t
+}
+
+sample <- function(){
+    library(RCurl)
+    #spambase.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
+    spambase.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data"
+    spambase.url  <- getURL(spambase.file)
+    spambase.data <- read.csv(textConnection(spambase.url), header = FALSE)
+    spambase.data <- spambase.data[1:1000,]
+    #colnames(spambase.data)[ncol(spambase.data)] <- "l"
+    colnames(spambase.data)[1] <- "l"
+    spambase.data$l <- factor(spambase.data$l)
+
+    q <- Queue(items = list(
+                            list(
+                                 list(s = spambase.data),
+                                 1,
+                                 0
+                                 )
+                            )
+              )
+
     t <- Tree(tree = list(), queue= q)
 
     t$grow()
