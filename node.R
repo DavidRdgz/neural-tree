@@ -1,5 +1,6 @@
 library(nnet)
 library(entropy)
+library(parallel)
 
 Node <- setRefClass(Class = "Node",
                     fields = list(
@@ -14,13 +15,12 @@ Node <- setRefClass(Class = "Node",
                     methods = list(
                                    set = function(...){
                                         args   <- list(...)
-
                                         Map(assign, names(args), args)
                                    },
-                                   init.split = function(df, ...){
+                                   init.split = function(...){
                                        args   <- list(...)
-                                       tble <- table(df$l)
-                                       e <- entropy.empirical(tble, unit = "log2")
+
+                                       e <- entropy.empirical(table(s$l), unit = "log2")
 
                                        # Check if 's' is worth splitting
                                        if (e < .35) {
@@ -33,25 +33,19 @@ Node <- setRefClass(Class = "Node",
                                        args <- list(...)
 
                                        # Ok 's' is worth splitting
-                                       rez <- list()
-                                       for (i in levels(s$l)) {
-                                           classj <- (s$l == i)
-                                           nnet.fit  <- nnet(classj ~ ., data = s[,!names(s) %in% c("l")], size = 1, trace=FALSE )
-                                           nnet.pred <- predict(nnet.fit, s[,!names(s) %in% c("l") ], type = "raw")
-                                           rez[[i]]  <- list("net.fit"  = nnet.fit, 
-                                                             "net.pred" = nnet.pred, 
-                                                             "classj"   = classj)
-                                       }
+                                       lvls      <- levels(s$l)
+                                       classj    <- mclapply(lvls, function(x) s$l == x)
+                                       nnet.fit  <- mclapply(classj, function(x) nnet(x ~ ., data = s[,!names(s) %in% c("l")], size = 1, trace=FALSE ))
+                                       nnet.pred <- mclapply(nnet.fit, function(x) predict(x , s[,!names(s) %in% c("l") ], type = "raw"))
+                                       rez       <- Map(list, lvls, classj, nnet.fit, nnet.pred)
                                        h.i <<- rez
                                    },
                                    eval.splits = function(...) { 
                                        args  <- list(...)
+                                       L <- h.i 
 
-                                       L          <- h.i
-                                       labels     <- names(L)
-
-                                       nnet.fit   <- lapply(L,"[[","net.fit")
-                                       nnet.pred  <- lapply(L,"[[","net.pred")
+                                       nnet.fit   <- lapply(h.i, function(x) x[[3]])
+                                       nnet.pred  <- lapply(h.i, function(x) x[[4]])
                                        candidates <- lapply(nnet.pred, function(x) round(x) == 1)
 
                                        h.s.r <- sapply(candidates, function(x) s.entropy(s, x))
@@ -93,13 +87,34 @@ s.entropy <- function(df, subset, ...) {
     return(p/n *entropy.empirical(table(df[x, "l"]), unit = "log2"))
 }
 
+sample2 <- function(...){
+    args <- list(...)
+
+    library(RCurl)
+    spambase.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
+
+    spambase.url  <- getURL(spambase.file)
+    spambase.data <- read.csv(textConnection(spambase.url), header = FALSE)
+
+    colnames(spambase.data)[ncol(spambase.data)] <- "l"
+    spambase.data$l <- factor(spambase.data$l)
+
+    n <- Node(id = 1, parent = 0, s = spambase.data)
+
+    if (n$init.split()) {
+        n$init.splits()
+        n$eval.splits()
+        n$split()
+    }
+    return(n)
+}
 sample <- function(...){
     args <- list(...)
 
     tmp.df <- iris
     colnames(tmp.df)[5] <- "l"
 
-    n <- Node(id = "000", s = tmp.df)
+    n <- Node(id = 1, parent = 0, s = tmp.df)
 
     if (n$init.split()) {
         n$init.splits()
