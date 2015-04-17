@@ -14,8 +14,8 @@ Node <- setRefClass(Class = "Node",
                                   ),
                     methods = list(
                                    set = function(...){
-                                        args   <- list(...)
-                                        Map(assign, names(args), args)
+                                       args   <- list(...)
+                                       Map(assign, names(args), args)
                                    },
                                    init.split = function(...){
                                        args   <- list(...)
@@ -86,6 +86,22 @@ s.entropy <- function(df, subset, ...) {
     return(p/n *entropy.empirical(table(df[x, "l"]), unit = "log2"))
 }
 
+sample <- function(...){
+    args <- list(...)
+
+    tmp.df <- iris
+    colnames(tmp.df)[5] <- "l"
+
+    n <- Node(id = 1, parent = 0, s = tmp.df)
+
+    if (n$init.split()) {
+        n$init.splits()
+        n$eval.splits()
+        #n$split()
+    }
+    return(n)
+}
+
 sample2 <- function(...){
     args <- list(...)
 
@@ -104,21 +120,6 @@ sample2 <- function(...){
         n$init.splits()
         n$eval.splits()
         n$split()
-    }
-    return(n)
-}
-sample <- function(...){
-    args <- list(...)
-
-    tmp.df <- iris
-    colnames(tmp.df)[5] <- "l"
-
-    n <- Node(id = 1, parent = 0, s = tmp.df)
-
-    if (n$init.split()) {
-        n$init.splits()
-        n$eval.splits()
-        #n$split()
     }
     return(n)
 }
