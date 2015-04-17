@@ -78,12 +78,9 @@ sample2 <- function(){
 
     q <- Queue(items = list(
                             list(
-                                 list(s = df),
-                                 1,
-                                 0
-                                 )
+                                 list(s = df), 1,0)
                             )
-              )
+    )
 
     t <- Tree(tree = list(), queue= q)
 
@@ -104,12 +101,9 @@ sample <- function(){
 
     q <- Queue(items = list(
                             list(
-                                 list(s = spambase.data),
-                                 1,
-                                 0
-                                 )
+                                 list(s = spambase.data),1,0)
                             )
-              )
+    )
 
     t <- Tree(tree = list(), queue= q)
 
