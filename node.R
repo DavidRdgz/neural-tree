@@ -9,8 +9,8 @@ Node <- setRefClass(Class = "Node",
                                   s      = "data.frame",
                                   s.l    = "list",
                                   s.r    = "list",
-                                  h      = "list",
-                                  h.i    = "list"
+                                  purity.candidates = "list",
+                                  net.candidates    = "list"
                                   ),
                     methods = list(
                                    set = function(...){
@@ -38,14 +38,13 @@ Node <- setRefClass(Class = "Node",
                                        nnet.fit  <- mclapply(classj, function(x) nnet(x ~ ., data = s[,!names(s) %in% c("l")], size = 1, trace=FALSE ))
                                        nnet.pred <- mclapply(nnet.fit, function(x) predict(x , s[,!names(s) %in% c("l") ], type = "raw"))
                                        rez       <- Map(list, lvls, classj, nnet.fit, nnet.pred)
-                                       h.i <<- rez
+                                       net.candidates <<- rez
                                    },
                                    eval.splits = function(...) { 
                                        args  <- list(...)
-                                       L <- h.i 
 
-                                       nnet.fit   <- lapply(h.i, function(x) x[[3]])
-                                       nnet.pred  <- lapply(h.i, function(x) x[[4]])
+                                       nnet.fit   <- lapply(net.candidates, function(x) x[[3]])
+                                       nnet.pred  <- lapply(net.candidates, function(x) x[[4]])
                                        candidates <- lapply(nnet.pred, function(x) round(x) == 1)
 
                                        h.s.r <- sapply(candidates, function(x) s.entropy(s, x))
@@ -54,22 +53,22 @@ Node <- setRefClass(Class = "Node",
                                        delta.h.s <- h.s + h.s.l - h.s.r
 
                                        rank <- order(delta.h.s, decreasing = TRUE)
-                                       h <<- list("nets"       = nnet.fit[rank],
-                                                  "candidates" = candidates[rank],
-                                                  "delta.h.s"  = delta.h.s[rank],
-                                                  "h.s.r"      = h.s.r[rank],
-                                                  "h.s.l"      = h.s.l[rank])
+                                       rez  <- Map(list, nnet.fit, candidates, delta.h.s, h.s.r, h.s.l)
+
+                                       purity.candidates <<- lapply(rank, function(x) rez[[x]])
                                    },
                                    split = function(...){
                                        args   <- list(...)
 
-                                       candidates <- h$candidates[[1]]
+                                       candidates <- purity.candidates[[1]][[2]]
+                                       r.purity     <- purity.candidates[[1]][[4]]
+                                       l.purity     <- purity.candidates[[1]][[5]]
                                        s.r <<- list("candidates" = candidates,
                                                     "s" = s[candidates, ],
-                                                    "h" = h$h.s.r[[1]])
+                                                    "h" = r.purity)
                                        s.l <<- list("candidates" = !candidates,
                                                     "s" = s[!candidates, ],
-                                                    "h" = h$h.s.l[[1]])
+                                                    "h" = l.purity)
                                    },
                                    initialize = function(...) {
                                        callSuper(...)
@@ -119,7 +118,7 @@ sample <- function(...){
     if (n$init.split()) {
         n$init.splits()
         n$eval.splits()
-        n$split()
+        #n$split()
     }
     return(n)
 }
