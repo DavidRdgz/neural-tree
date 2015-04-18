@@ -19,17 +19,17 @@ Tree <- setRefClass(Class = "Tree",
 
                                            n <- Node(id = id.tmp, parent = p.id.tmp, s = s.tmp$s)
 
-                                           if (n$init.split()) {
+                                           if (!n$is.leaf()) {
+                                               print("Splits")
                                                n$init.splits()
+                                               print("Order Splits")
                                                n$eval.splits()
+                                               print("Split")
                                                n$split()
 
                                                tree <<- append(tree, n)
-
                                                if (nrow(n$s.r$s) > 0) {
                                                    queue$push(list(n$s.r, iter$inc(), id.tmp))
-                                               }
-                                               if (nrow(n$s.l$s) > 0) {
                                                    queue$push(list(n$s.l, iter$inc(), id.tmp))
                                                }
                                            } else {
@@ -41,12 +41,8 @@ Tree <- setRefClass(Class = "Tree",
                                    peek = function(...) {
                                        length(tree)
                                    },
-                                   spine.labels = function(...) {
-                                       tmp <- lapply(tree, function(x) names(x$h$delta.h.s[1]))
-                                   },
-                                   leaf.labels = function(...) {
-                                       tmp <- lapply(tree, function(x) names(x$h$delta.h.s[1]))
-                                       lapply(tree[tmp], function(x) table(x$s$l))
+                                   get.labels = function(...) {
+                                       lapply(tree, function(x) x[["label"]])
                                    },
                                    initialize = function(...) {
                                        callSuper(...)
@@ -72,7 +68,7 @@ iter <- setRefClass(Class = "iter",
                                    )
                     )
 
-sample2 <- function(){
+iris.sample <- function(){
     df <- iris
     colnames(df)[5] <- "l"
 
@@ -83,25 +79,41 @@ sample2 <- function(){
     )
 
     t <- Tree(tree = list(), queue= q)
-
     t$grow()
     t
 }
 
-sample <- function(){
+spam.sample <- function(){
     library(RCurl)
-    #spambase.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
-    spambase.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data"
+    spambase.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
     spambase.url  <- getURL(spambase.file)
     spambase.data <- read.csv(textConnection(spambase.url), header = FALSE)
-    spambase.data <- spambase.data[1:1000,]
-    #colnames(spambase.data)[ncol(spambase.data)] <- "l"
-    colnames(spambase.data)[1] <- "l"
+    colnames(spambase.data)[ncol(spambase.data)] <- "l"
     spambase.data$l <- factor(spambase.data$l)
 
     q <- Queue(items = list(
                             list(
                                  list(s = spambase.data),1,0)
+                            )
+    )
+
+    t <- Tree(tree = list(), queue= q)
+    t$grow()
+    t
+}
+
+letter.sample <- function(){
+    library(RCurl)
+    letter.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data"
+    letter.url  <- getURL(letter.file)
+    letter.data <- read.csv(textConnection(letter.url), header = FALSE)
+    colnames(letter.data)[1] <- "l"
+    letter.data$l <- factor(letter.data$l)
+    letter.data   <-subset(letter.data, l %in% c("A","B","C","D"))
+
+    q <- Queue(items = list(
+                            list(
+                                 list(s = letter.data),1,0)
                             )
     )
 
