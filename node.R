@@ -7,8 +7,9 @@ Node <- setRefClass(Class = "Node",
                                   id      = "numeric",
                                   parent  = "numeric",
                                   label   = "character",
+                                  leaf    = "logical",
                                   s       = "data.frame",
-                                  #net     = "nnet",
+                                  net     = "list",
                                   s.l     = "list",
                                   s.r     = "list",
                                   purity.candidates = "list",
@@ -23,12 +24,11 @@ Node <- setRefClass(Class = "Node",
                                        args   <- list(...)
                                        tble <- sort(table(s$l), decreasing = TRUE)
                                        e <- entropy.empirical(tble, unit = "log2")
-                                       print(e)
 
                                        # Check if 's' is worth splitting
-                                       if (e < .35) {
+                                       if (e < .6) {
                                            label   <<- names(tble)[1]
-                                           #is.leaf <<- TRUE
+                                           leaf <<- TRUE
                                            return(TRUE)
                                        } else {
                                            return(FALSE)
@@ -36,7 +36,6 @@ Node <- setRefClass(Class = "Node",
                                    },
                                    init.splits = function(...) {
                                        args <- list(...)
-
 
                                        # Ok 's' is worth splitting
                                        lvls      <- levels(s$l)
@@ -61,15 +60,11 @@ Node <- setRefClass(Class = "Node",
                                        nnet.pred  <- lapply(net.candidates, function(x) x[[4]])
                                        candidates <- lapply(nnet.pred, function(x) round(x) == 1)
 
-                                       h.s.r <- sapply(candidates, function(x) s.entropy(s, x))
-                                       h.s.l <- sapply(candidates, function(x) s.entropy(s, !x))
-                                       h.s   <- s.entropy(s, rep(TRUE, nrow(s)))
+                                       h.s.r <- sapply(candidates, function(x) s.entropy(s$l, x))
+                                       h.s.l <- sapply(candidates, function(x) s.entropy(s$l, !x))
+                                       h.s   <- s.entropy(s$l, rep(TRUE, nrow(s)))
                                        delta.h.s <- h.s + h.s.l - h.s.r
 
-                                       print("candidate size: ")
-                                       print(lapply(candidates, length))
-                                       print("delta hs")
-                                       print(delta.h.s)
                                        rank <- order(delta.h.s, decreasing = TRUE)
                                        rez  <- Map(list, lvls, nnet.fit, candidates, delta.h.s, h.s.r, h.s.l)
 
@@ -82,6 +77,7 @@ Node <- setRefClass(Class = "Node",
                                        r.purity    <- purity.candidates[[1]][[5]]
                                        l.purity    <- purity.candidates[[1]][[6]]
                                        label      <<- purity.candidates[[1]][[1]]
+                                       net        <<- list(purity.candidates[[1]][[2]])
 
                                        s.r        <<- list("candidates" = candidates,
                                                            "s" = s[candidates, ],
@@ -100,12 +96,9 @@ Node <- setRefClass(Class = "Node",
 s.entropy <- function(df, subset, ...) {
     args <- list(...)
     x  <- subset
-    print("here")
-
-
     p <- sum(x)
     n <- length(x)
-    return(p/n *entropy.empirical(table(df[x, "l"]), unit = "log2"))
+    return(p/n *entropy.empirical(table(df[x]), unit = "log2"))
 }
 
 iris.sample <- function(...){
