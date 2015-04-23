@@ -1,51 +1,52 @@
-source("node.R")
+source("node2.R")
 source("queue.R")
 
 Tree <- setRefClass(Class = "Tree",
                     fields = list(
-                                  tree= "list",
-                                  queue = "Queue" 
+                                  tree= "list"
                                   ),
                     methods = list(
-                                   grow = function(...){
+                                   grow = function(init.node, cut.off, ...) {
                                        args <- list(...)
 
-                                       iter <- iter(cur.val = 1)
-                                       while (queue$size() > 0) {
-                                           tmp       <- queue$pop()
-                                           s.tmp     <- tmp[[1]]
-                                           id.tmp    <- tmp[[2]]
-                                           p.id.tmp  <- tmp[[3]]
-
-                                           n <- Node(id = id.tmp, parent = p.id.tmp, s = s.tmp$s, leaf = FALSE)
-
-                                           # Is there eough impurity to try to split
-                                           if (!n$is.leaf()) {
-                                               # Yes, but now check if single layer neural net
-                                               # achieves enough purity
-                                               print("Splits")
-                                               n$init.splits()
-                                               print("Order Splits")
-                                               n$eval.splits()
-                                               print("Split")
-                                               n$split()
-
-                                               tree <<- append(tree, n)
-
-                                               if (nrow(n$s.r$s) > 0 && nrow(n$s.l$s) > 0) {
-                                                   queue$push(list(n$s.r, iter$inc(), id.tmp))
-                                                   queue$push(list(n$s.l, iter$inc(), id.tmp))
-                                               } else {
-                                                   # Not enough impurity to split based on neural net
-                                                   # set as leaf
-                                                   n$set(leaf = TRUE)
-                                               }
-                                           } else {
-                                               # Not enough impurity to try initial split
-                                               n$set(leaf = TRUE)
-                                               tree <<- append(tree, n)
-                                           }
+                                       q <- init.node
+                                       q.count <- 1
+                                       while(length(q) > 0) {
+                                           #possible parallel processing with mclapply
+                                           split.bucket <- lapply(q, function(x) splits(x, cut.off))
+                                           t <- lapply(split.bucket, function(x) x$de.node)       # nodes needing no further splits
+                                           q <- lapply(split.bucket, function(x) x$de.child)[[1]] # nodes needing further splitting
+                                           print("Queue length")
+                                           #print(length(q))
+                                           print(q.count)
+                                           q.count <- q.count + length(q)
+    
+                                           #clean up
+                                           t <- t[lapply(t,length)>0]
+                                           q <- q[lapply(q,length)>0]
+                                           
+                                           tree <<- append(tree, t)
                                        }
+                                   },
+                                   splits = function(df, cut.off, ...) {
+                                       args <- list(...)
+                                       node <- Node(id = 1, parent = 0, S = df, leaf = FALSE)
+
+                                       node$is.pure(cut.off)
+                                       if (!node$leaf) {
+                                           node$split()
+                                           if (nrow(node$L) >0 && nrow(node$R) > 0) {
+                                                child.tmp <- list(node$L, node$R)
+                                           } else {
+                                               child.tmp <- list()
+                                               node$set(leaf = TRUE)
+                                           }
+                                           spine.tmp <- node
+                                       } else {
+                                           child.tmp <- list()
+                                           spine.tmp <- node
+                                       }
+                                       list("de.node" = spine.tmp, "de.child" = child.tmp)
                                    },
                                    peek = function(...) {
                                        length(tree)
@@ -80,7 +81,7 @@ iter <- setRefClass(Class = "iter",
                                    )
                     )
 
-iris.sample <- function(){
+iris.sample <- function(c.off, ...){
     ########
     #
     # Prereqs: e < .35
@@ -88,14 +89,27 @@ iris.sample <- function(){
     #######
     df <- iris
     colnames(df)[5] <- "l"
-
-    q <- Queue(items = list( list(list(s = df), 1,0)))
-    t <- Tree(tree = list(), queue= q)
-    t$grow()
+    df$l <- factor(df$l)
+    t <- Tree()
+    t$grow(list(df),c.off)
+    #print(unlist(t$get.leaves()), t$peek())
     t
 }
 
-spam.sample <- function(){
+car.sample <- function(c.off, ...){
+    ########
+    #
+    # Prereqs: e < .35
+    #
+    #######
+    df <- mtcars
+    colnames(df)[10] <- "l"
+    df$l <- factor(df$l)
+    t <- Tree()
+    t$grow(list(df),c.off)
+    t
+}
+spam.sample <- function(c.off, ...){
     ########
     #
     # Prereqs: e < .5
@@ -107,14 +121,13 @@ spam.sample <- function(){
     spambase.data <- read.csv(textConnection(spambase.url), header = FALSE)
     colnames(spambase.data)[ncol(spambase.data)] <- "l"
     spambase.data$l <- factor(spambase.data$l)
-
-    q <- Queue(items = list(list(list(s = spambase.data),1,0)))
-    t <- Tree(tree = list(), queue= q)
-    t$grow()
+    
+    t <- Tree()
+    t$grow(list(spammbase.data),c.off)
     t
 }
 
-letter.sample <- function(){
+letter.sample <- function(c.off, ...){
     ########
     #
     # Prereqs: e < .5 
@@ -126,11 +139,12 @@ letter.sample <- function(){
     letter.data <- read.csv(textConnection(letter.url), header = FALSE)
     colnames(letter.data)[1] <- "l"
     letter.data$l <- factor(letter.data$l)
-    letter.data   <-subset(letter.data, l %in% c("A","B","C","D"))
+    letter.data   <-droplevels(subset(letter.data, l %in% c("A","B","C","D") ))
 
-    q <- Queue(items = list(list(list(s = letter.data),1,0)))
-    t <- Tree(tree = list(), queue= q)
-    t$grow()
+    t <- Tree()
+    t$grow(list(letter.data),c.off)
+    #print("Get Leaves")
+    #unlist(t$get.leaves())
     t
 }
 
