@@ -1,90 +1,104 @@
 library(nnet)
 library(entropy)
 library(parallel)
-
+library(caret)
 Node <- setRefClass(Class = "Node",
                     fields = list(
                                   id      = "numeric",
                                   parent  = "numeric",
                                   label   = "character",
                                   leaf    = "logical",
-                                  s       = "data.frame",
+                                  S       = "data.frame",
                                   net     = "list",
-                                  s.l     = "list",
-                                  s.r     = "list",
-                                  purity.candidates = "list",
-                                  net.candidates    = "list"
+                                  L       = "data.frame",
+                                  R       = "data.frame",
+                                  delta.purity = "numeric"
                                   ),
                     methods = list(
                                    set = function(...){
                                        args   <- list(...)
                                        Map(assign, names(args), args)
                                    },
-                                   is.leaf = function(...){
-                                       args   <- list(...)
-                                       tble <- sort(table(s$l), decreasing = TRUE)
-                                       e <- entropy.empirical(tble, unit = "log2")
+                                   is.pure = function(cutoff, ...){
+                                       args <- list(...)
+                                       tble <- sort(table(S$l), decreasing = TRUE)
+                                       e    <- entropy.empirical(tble, unit = "log2")
 
                                        # Check if 's' is worth splitting
-                                       if (e < .6) {
-                                           label   <<- names(tble)[1]
-                                           leaf <<- TRUE
-                                           return(TRUE)
-                                       } else {
-                                           return(FALSE)
+                                       if (e < cutoff) {
+                                           label <<- names(tble)[1]
+                                           leaf  <<- TRUE
                                        }
                                    },
-                                   init.splits = function(...) {
+                                   split = function(...) {
                                        args <- list(...)
 
-                                       # Ok 's' is worth splitting
-                                       lvls      <- levels(s$l)
-                                       classj    <- lapply(lvls, function(x) s$l == x)
+                                       lvls      <- levels(S$l)
+                                       classj    <- lapply(lvls, function(x) S$l == x)
+                                       r.p <- sapply(classj, function(x) sum(x)/length(x))
+                                       exists.trump <- r.p >.65
 
-                                            #find cores / open processes
-                                            #no_cores <- detectCores() - 1
-                                            #cl <- makeCluster(no_cores, type="FORK")
-                                            #nnet.fit  <- parLapply(cl, classj, function(x) nnet(x ~ ., data = s[,!names(s) %in% c("l")], size = 1, trace=FALSE))
-                                            #stopCluster(cl)
+                                       #if (sum(exists.trump)) {
+                                       #    trump <- lvls[exists.trump]
+                                       #    classt <- S$l == trump
+                                       #    net.tmp <- nnet(classt ~ ., data = S[sample(nrow(S)),], size = 2, rang=.1, decay = 5e-4, maxit = 400, trace = FALSE)
+                                       #    right.candidate <- trump
+                                       #} else {
 
-                                       nnet.fit  <- lapply(classj, function(x) nnet(x ~ ., data = s[,!names(s) %in% c("l")], size = 1, trace=FALSE ))
-                                       nnet.pred <- lapply(nnet.fit, function(x) predict(x , s[,!names(s) %in% c("l") ], type = "raw"))
-                                       rez       <- Map(list, lvls, classj, nnet.fit, nnet.pred)
-                                       net.candidates <<- rez
-                                   },
-                                   eval.splits = function(...) { 
-                                       args  <- list(...)
+                                       my.grid <- expand.grid(.decay = c(0.5, 0.1), .size = c(1,2,3))
 
-                                       lvls       <- lapply(net.candidates, function(x) x[[1]])
-                                       nnet.fit   <- lapply(net.candidates, function(x) x[[3]])
-                                       nnet.pred  <- lapply(net.candidates, function(x) x[[4]])
-                                       candidates <- lapply(nnet.pred, function(x) round(x) == 1)
+                                       # fit neural net and get predictions per class
+                                       tune.params <- train(S[, !names(S) %in% c("l")], S$l,
+                                                        method = "nnet",
+                                                        preProcess = "range", 
+                                                        tuneGrid = my.grid,
+                                                        tuneLength = 2,
+                                                        trace = FALSE,
+                                                        maxit = 100) 
+                                       
+                                       net.tmp <- nnet(l ~ . , data = S[sample(nrow(S)),], size = tune.params$bestTune$size , rang = .1, decay = tune.params$bestTune$decay, maxit = 400, trace = FALSE)
 
-                                       h.s.r <- sapply(candidates, function(x) s.entropy(s$l, x))
-                                       h.s.l <- sapply(candidates, function(x) s.entropy(s$l, !x))
-                                       h.s   <- s.entropy(s$l, rep(TRUE, nrow(s)))
-                                       delta.h.s <- h.s + h.s.l - h.s.r
+                                       r.pred <- lapply(classj, function(x) predict(net.tmp, S[x,], type = "class"))
+                                       l.pred <- lapply(classj, function(x) predict(net.tmp, S[!x,], type = "class"))
+                                       #retry <- Map(function(x,y) x %in% y, lvls, names(table(r.pred)))
+                                       #print("Retry")
+                                       #print(retry)
+                                       print("S$l distribution")
+                                       print(table(S$l))
+                                       print("Classj predictions")
+                                       print(sapply(r.pred,table))
 
-                                       rank <- order(delta.h.s, decreasing = TRUE)
-                                       rez  <- Map(list, lvls, nnet.fit, candidates, delta.h.s, h.s.r, h.s.l)
+                                       #evaluate which label gives best entropy score
+                                       e.r <- sapply(r.pred, function(x) entropy.empirical(table(x)))
+                                       e.l <- sapply(l.pred, function(x) entropy.empirical(table(x)))
+                                       names(e.r) <- lvls
+                                       #print(e.r)
+                                       #print(e.l)
 
-                                       purity.candidates <<- lapply(rank, function(x) rez[[x]])
-                                   },
-                                   split = function(...){
-                                       args   <- list(...)
+                                       r.p <- sapply(classj, function(x) sum(x)/length(x))
+                                       
+                                       e <- entropy.empirical(table(S$l))
+                                       d.e <- e - (1-r.p)*e.l +  r.p*e.r
+                                       names(d.e) <- lvls
+                                       print("Entropy scores")
+                                       print(sort(d.e, decreasing = TRUE))
+                                       
+                                       right.candidate <- names(sort(d.e, decreasing = TRUE))[1]
+                                       print("R2 subset")
+                                       print(right.candidate)
+                                       #}
 
-                                       candidates  <- purity.candidates[[1]][[3]]
-                                       r.purity    <- purity.candidates[[1]][[5]]
-                                       l.purity    <- purity.candidates[[1]][[6]]
-                                       label      <<- purity.candidates[[1]][[1]]
-                                       net        <<- list(purity.candidates[[1]][[2]])
-
-                                       s.r        <<- list("candidates" = candidates,
-                                                           "s" = s[candidates, ],
-                                                           "h" = r.purity)
-                                       s.l        <<- list("candidates" = !candidates,
-                                                           "s" = s[!candidates, ],
-                                                           "h" = l.purity)
+                                       pred <- predict(net.tmp, S, type = "class")
+                                       print("Prediction distribution")
+                                       print(table(pred))
+                                       R.tmp <- droplevels(S[pred == right.candidate, ])
+                                       L.tmp <- droplevels(S[pred != right.candidate, ])
+                                       
+                                       label <<- right.candidate
+                                       net   <<- list(net.tmp)
+                                       R     <<- R.tmp
+                                       L     <<- L.tmp
+                                       delta.purity <<- d.e
                                    },
                                    initialize = function(...) {
                                        callSuper(...)
@@ -93,31 +107,23 @@ Node <- setRefClass(Class = "Node",
                                    )
                     )
 
-s.entropy <- function(df, subset, ...) {
-    args <- list(...)
-    x  <- subset
-    p <- sum(x)
-    n <- length(x)
-    return(p/n *entropy.empirical(table(df[x]), unit = "log2"))
-}
-
-iris.sample <- function(...){
+iris.sample <- function(c.off, ...){
     args <- list(...)
 
     tmp.df <- iris
     colnames(tmp.df)[5] <- "l"
+    tmp.df$l <- factor(tmp.df$l)    
 
-    n <- Node(id = 1, parent = 0, s = tmp.df)
+    n <- Node(id = 1, parent = 0, S = tmp.df, leaf = FALSE)
 
-    if (n$init.split()) {
-        n$init.splits()
-        n$eval.splits()
+    n$is.pure(c.off)
+    if (!n$leaf) {
         n$split()
     }
     return(n)
 }
 
-spam.sample <- function(...){
+spam.sample <- function(c.off, ...){
     args <- list(...)
 
     library(RCurl)
@@ -127,13 +133,13 @@ spam.sample <- function(...){
     spambase.data <- read.csv(textConnection(spambase.url), header = FALSE)
 
     colnames(spambase.data)[ncol(spambase.data)] <- "l"
+    spambase.data$l[spambase.data$l == 1] <- "spam"
+    spambase.data$l[spambase.data$l == 0] <- "ham"
     spambase.data$l <- factor(spambase.data$l)
 
-    n <- Node(id = 1, parent = 0, s = spambase.data)
-
-    if (n$is.leaf()) {
-        n$init.splits()
-        n$eval.splits()
+    n <- Node(id = 1, parent = 0, S = spambase.data, leaf = FALSE)
+    n$is.pure(c.off)
+    if (!n$leaf) {
         n$split()
     }
     return(n)
