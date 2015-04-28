@@ -24,6 +24,12 @@ These two classes are split by the hyperplane: y + 3/5x - 3/4 = 0. Within one st
 
 Currently there are some package dependencies. These include:
 
+* nnet
+* entropy
+* caret
+* plyr
+* parallel
 
+## Initial Setup
 
-Simply load the neural-tree files into your working directory. Then simply run one of the functions in the samples file.
+Simply load the neural-tree files into your working directory. Then run one of the functions in the samples.R file.
