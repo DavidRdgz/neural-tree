@@ -107,7 +107,7 @@ Node <- setRefClass(Class = "Node",
                                    )
                     )
 
-iris.sample <- function(c.off, ...){
+iris.sample <- function(cut.off, ...){
     args <- list(...)
 
     tmp.df <- iris
@@ -116,29 +116,7 @@ iris.sample <- function(c.off, ...){
 
     n <- Node(id = 1, parent = 0, S = tmp.df, leaf = FALSE)
 
-    n$is.pure(c.off)
-    if (!n$leaf) {
-        n$split()
-    }
-    return(n)
-}
-
-spam.sample <- function(c.off, ...){
-    args <- list(...)
-
-    library(RCurl)
-    spambase.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
-
-    spambase.url  <- getURL(spambase.file)
-    spambase.data <- read.csv(textConnection(spambase.url), header = FALSE)
-
-    colnames(spambase.data)[ncol(spambase.data)] <- "l"
-    spambase.data$l[spambase.data$l == 1] <- "spam"
-    spambase.data$l[spambase.data$l == 0] <- "ham"
-    spambase.data$l <- factor(spambase.data$l)
-
-    n <- Node(id = 1, parent = 0, S = spambase.data, leaf = FALSE)
-    n$is.pure(c.off)
+    n$is.pure(cut.off)
     if (!n$leaf) {
         n$split()
     }
