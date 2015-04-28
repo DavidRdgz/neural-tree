@@ -2,12 +2,14 @@ library(nnet)
 library(entropy)
 library(parallel)
 library(caret)
+
 Node <- setRefClass(Class = "Node",
                     fields = list(
                                   id      = "numeric",
                                   parent  = "numeric",
                                   label   = "character",
                                   leaf    = "logical",
+                                  is.right= "character",
                                   S       = "data.frame",
                                   net     = "list",
                                   L       = "data.frame",
@@ -72,8 +74,6 @@ Node <- setRefClass(Class = "Node",
                                        e.r <- sapply(r.pred, function(x) entropy.empirical(table(x)))
                                        e.l <- sapply(l.pred, function(x) entropy.empirical(table(x)))
                                        names(e.r) <- lvls
-                                       #print(e.r)
-                                       #print(e.l)
 
                                        r.p <- sapply(classj, function(x) sum(x)/length(x))
                                        
