@@ -1,4 +1,5 @@
 source("node.R")
+library(plyr)
 
 Tree <- setRefClass(Class = "Tree",
                     fields = list(
@@ -59,13 +60,14 @@ Tree <- setRefClass(Class = "Tree",
                                        lapply(tree, function(x) if(x$leaf == TRUE) x$label)
                                    },
                                    get.tree = function(id, ...) {
-                                       tree[c(sapply(tree, function(x) x$id == id))][[1]]
+                                        #print(sapply(tree, function(x) x$id == id))
+                                       tree[unlist(lapply(tree, function(x) x$id == id))][[1]]
                                    },
                                    get.children = function(id, ...) {
                                        if (get.tree(id)$leaf) {
                                            print("No children")
                                        } else {
-                                           tree[sapply(tree, function(x) x$parent == id)]
+                                           tree[unlist(lapply(tree, function(x) x$parent == id))]
                                        }
                                    },
                                    get.parent = function(id, ...) {
@@ -73,21 +75,23 @@ Tree <- setRefClass(Class = "Tree",
                                    },
                                    traverse = function(v, ...) {
                                        id <- 1
-                                       while (get.tree(id)$leaf) {
+                                       while (!get.tree(id)$leaf) {
                                            label.tmp   <- predict(get.tree(id)$net, v, type = "class")
                                            children    <- get.children(id) 
-                                           R           <- sapply(children, function(x) x$is.right == "Right")
+                                           R           <- unlist(lapply(children, function(x) x$is.right == "Right"))
+                                           #print("predicted R")
+                                           #print(children[R][[1]]$id)
 
-                                           if (label.tmp == get.tree(id)$label) {
-                                               id <- children[R]$id
+                                           if (unlist(label.tmp) == get.tree(id)$label) {
+                                               id <- children[R][[1]]$id
                                            } else {
-                                               id <- children[!R]$id
+                                               id <- children[!R][[1]]$id
                                            }
                                        }
-                                       return(get.tree(id)$label)
+                                       get.tree(id)$label
                                    }, 
                                    predict.nt = function(df, ...) {
-                                       apply(df, 1, function(x) traverse(x))
+                                       adply(df, 1, function(x) traverse(x), .expand = FALSE)[,2]
                                    },
                                    initialize = function(...) {
                                        callSuper(...)
@@ -177,7 +181,7 @@ letter.sample <- function(c.off, ...){
     letter.data   <-droplevels(subset(letter.data, l %in% c("A","B","C","D") ))
 
     t <- Tree()
-    t$grow(list(list(0, letter.data)),c.off)
+    t$grow(list(list("None", 0, letter.data)),c.off)
     #print("Get Leaves")
     #unlist(t$get.leaves())
     t
