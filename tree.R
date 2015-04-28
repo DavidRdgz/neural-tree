@@ -1,4 +1,5 @@
 source("node.R")
+source("iter.R")
 library(plyr)
 
 Tree <- setRefClass(Class = "Tree",
@@ -99,94 +100,4 @@ Tree <- setRefClass(Class = "Tree",
                                    }
                                    )
                     )
-
-iter <- setRefClass(Class = "iter",
-                    fields = list(
-                                  cur.val = "numeric"
-                                  ),
-                    methods = list(
-                                   inc = function(...){
-                                       previous <- cur.val
-                                       cur.val <<- previous + 1
-                                       return(previous)
-                                   },
-                                   peek = function(...) {
-                                       cur.val
-                                   },
-                                   initialize = function(...) {
-                                       callSuper(...)
-                                       .self
-                                   }
-                                   )
-                    )
-
-iris.sample <- function(c.off, ...){
-    ########
-    #
-    # Prereqs: e < .35
-    #
-    #######
-    df <- iris
-    colnames(df)[5] <- "l"
-    df$l <- factor(df$l)
-    t <- Tree()
-    t$grow(list(list("None",0, df)),c.off)
-    #print(unlist(t$get.leaves()), t$peek())
-    t
-}
-
-car.sample <- function(c.off, ...){
-    ########
-    #
-    # Prereqs: e < .35
-    #
-    #######
-    df <- mtcars
-    colnames(df)[10] <- "l"
-    df$l <- factor(df$l)
-    t <- Tree()
-    t$grow(list(df),c.off)
-    t
-}
-spam.sample <- function(c.off, ...){
-    ########
-    #
-    # Prereqs: e < .5
-    #
-    #######
-    library(RCurl)
-    spambase.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
-    spambase.url  <- getURL(spambase.file)
-    spambase.data <- read.csv(textConnection(spambase.url), header = FALSE)
-    colnames(spambase.data)[ncol(spambase.data)] <- "l"
-    spambase.data$l <- factor(spambase.data$l)
-    
-    t <- Tree()
-    t$grow(list(spammbase.data),c.off)
-    t
-}
-
-letter.sample <- function(c.off, ...){
-    ########
-    #
-    # Prereqs: e < .5 
-    #
-    #######
-    library(RCurl)
-    letter.file <- "https://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data"
-    letter.url  <- getURL(letter.file)
-    letter.data <- read.csv(textConnection(letter.url), header = FALSE)
-    colnames(letter.data)[1] <- "l"
-    letter.data$l <- factor(letter.data$l)
-    letter.data   <-droplevels(subset(letter.data, l %in% c("A","B","C","D") ))
-
-    t <- Tree()
-    t$grow(list(list("None", 0, letter.data)),c.off)
-    #print("Get Leaves")
-    #unlist(t$get.leaves())
-    t
-}
-
-
-
 
