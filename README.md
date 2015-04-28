@@ -7,6 +7,12 @@ The abstract to the paper by Stromberg, et al. gives a nice introduction to neur
 
 >The concept of tree classifiers is combined with the popular neural net structure. Instead of having one large neural net to capture all the regions in the feature space, the authors suggest the compromise of using small single-output nets at each tree node. This hybrid classifier is referred to as a neural tree.
 
+One reason to use to a neural tree instead of a decision tree (implementing the induction method introduced by Breiman) is when one needs more flexible splitting hyperplanes. 
+
+For example, consider the following. Suppose one wishes to split the following classes of points: (B)lack and (R)ed, in the xy-plane. 
+![Alt text](neuralsplit.png)
+
+For example, these two classes are split by the hyperplane: y +3/5x-3/4 = 0. Within one step of the neural tree algorithm these classes would be identified. It is not necessarily true for a traditional decision tree splitting over the hyperplanes produced by a single attribute.
 # Authors
 
 
