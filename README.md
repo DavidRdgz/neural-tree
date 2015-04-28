@@ -12,6 +12,7 @@ The abstract to the paper by Stromberg, et al. gives a nice introduction to neur
 One reason to use to a neural tree instead of a decision tree (implementing the induction method introduced by Breiman) is when one needs more flexible splitting hyperplanes. 
 
 For example, consider the following case. Suppose one wishes to split the following classes of points: (B)lack and (R)ed, in the xy-plane. 
+
 ![Alt text](neuralsplit.png)
 
 These two classes are split by the hyperplane: y + 3/5x - 3/4 = 0. Within one step of the neural tree algorithm these classes would be identified. It is not necessarily true for a traditional decision tree splitting over the hyperplanes produced by a single attribute.
