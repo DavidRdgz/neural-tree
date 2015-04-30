@@ -11,7 +11,6 @@ Tree <- setRefClass(Class = "Tree",
                                        args <- list(...)
 
                                        q <- init.node
-                                       q.count <- 1
                                        iter <- iter(cur.val = 1)
                                        parent <- 0
                                        while(length(q) > 0) {
@@ -19,15 +18,14 @@ Tree <- setRefClass(Class = "Tree",
                                            split.bucket <- lapply(q, function(x) splits(x[[3]], cut.off, iter$inc(), x[[2]], x[[1]]))
                                            t <- lapply(split.bucket, function(x) x$de.node)       # nodes needing no further splits
                                            q <- lapply(split.bucket, function(x) x$de.child)[[1]] # nodes needing further splitting
-                                           print("Tree length")
-                                           print(q.count)
-                                           q.count <- q.count + length(q)
     
                                            #clean up
                                            t <- t[lapply(t,length)>0]
                                            q <- q[lapply(q,length)>0]
                                            
                                            tree <<- append(tree, t)
+
+                                           print(c("Tree length", iter$peek()))
                                        }
                                    },
                                    splits = function(df, cut.off, id, p.id, is.right, ...) {
