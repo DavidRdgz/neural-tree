@@ -19,7 +19,7 @@ Tree <- setRefClass(Class = "Tree",
                                            split.bucket <- lapply(q, function(x) splits(x[[3]], cut.off, iter$inc(), x[[2]], x[[1]]))
                                            t <- lapply(split.bucket, function(x) x$de.node)       # nodes needing no further splits
                                            q <- lapply(split.bucket, function(x) x$de.child)[[1]] # nodes needing further splitting
-                                           print("Queue length")
+                                           print("Tree length")
                                            print(q.count)
                                            q.count <- q.count + length(q)
     
@@ -32,7 +32,6 @@ Tree <- setRefClass(Class = "Tree",
                                    },
                                    splits = function(df, cut.off, id, p.id, is.right, ...) {
                                        args <- list(...)
-                                       print(p.id)
                                        node <- Node(id = id, parent = p.id, S = df, leaf = FALSE, is.right = is.right )
 
                                        node$is.pure(cut.off)
@@ -61,7 +60,6 @@ Tree <- setRefClass(Class = "Tree",
                                        lapply(tree, function(x) if(x$leaf == TRUE) x$label)
                                    },
                                    get.tree = function(id, ...) {
-                                        #print(sapply(tree, function(x) x$id == id))
                                        tree[unlist(lapply(tree, function(x) x$id == id))][[1]]
                                    },
                                    get.children = function(id, ...) {
@@ -80,8 +78,6 @@ Tree <- setRefClass(Class = "Tree",
                                            label.tmp   <- predict(get.tree(id)$net, v, type = "class")
                                            children    <- get.children(id) 
                                            R           <- unlist(lapply(children, function(x) x$is.right == "Right"))
-                                           #print("predicted R")
-                                           #print(children[R][[1]]$id)
 
                                            if (unlist(label.tmp) == get.tree(id)$label) {
                                                id <- children[R][[1]]$id
