@@ -1,4 +1,4 @@
-![Alt text](neuraltree.png)
+![Alt text](/images/neuraltree.png)
 # neural-tree
 
 neural-tree is an implementation of the algorithm developed in the paper [Neural Trees: Using Neural Nets in a Tree Classifier Structure](http://ieeexplore.ieee.org/xpl/login.jsp?tp=&arnumber=150832&url=http%3A%2F%2Fieeexplore.ieee.org%2Fxpls%2Fabs_all.jsp%3Farnumber%3D150832). 
@@ -13,7 +13,7 @@ One reason to use to a neural tree instead of a decision tree (implementing the 
 
 For example, consider the following case. Suppose one wishes to split the following classes of points: (B)lack and (R)ed, in the xy-plane. 
 
-![Alt text](neuralsplit.png)
+![Alt text](/images/neuralsplit.png)
 
 These two classes are split by the hyperplane: y + 3/5x - 3/4 = 0. Within one step of the neural tree algorithm these classes would be identified. It is not necessarily true for a traditional decision tree splitting over the hyperplanes produced by a single attribute.
 
