@@ -51,6 +51,7 @@ Node <- setRefClass(Class = "Node",
                                                         maxit = 100) 
                                        
                                        net.tmp <- nnet(l ~ . , data = S[sample(nrow(S)),], size = tune.params$bestTune$size , rang = .1, decay = tune.params$bestTune$decay, maxit = 400, trace = FALSE)
+                                       #net.tmp <- nnet(l ~ . , data = S[sample(nrow(S)),], size = 2 , trace = FALSE)
 
                                        r.pred <- lapply(classj, function(x) predict(net.tmp, S[x,], type = "class"))
                                        l.pred <- lapply(classj, function(x) predict(net.tmp, S[!x,], type = "class"))
@@ -71,6 +72,12 @@ Node <- setRefClass(Class = "Node",
                                        pred <- predict(net.tmp, S, type = "class")
                                        R.tmp <- droplevels(S[pred == right.candidate, ])
                                        L.tmp <- droplevels(S[pred != right.candidate, ])
+
+
+                                        #temporary pca
+                                       #R.tmp <- do.pca(R.tmp)
+                                       #L.tmp <- do.pca(L.tmp)
+
                                        
                                        label <<- right.candidate
                                        net   <<- list(net.tmp)
@@ -86,3 +93,15 @@ Node <- setRefClass(Class = "Node",
                     )
 
 
+do.pca <- function(d...) {
+
+
+    x.train <- d[, !names(d) %in% c("l")]
+    pr.d <- prcomp(x.train, scale = TRUE)
+    x.train <- predict(pr.d, x.train)
+    x.train <- round(x.train, 4)
+    d <- cbind(as.data.frame(x.train),"l"= d$l)
+    d
+
+
+}
