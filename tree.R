@@ -30,7 +30,7 @@ Tree <- setRefClass(Class = "Tree",
                                    },
                                    splits = function(df, cut.off, id, p.id, is.right, ...) {
                                        args <- list(...)
-                                       node <- Node(id = id, parent = p.id, S = df, leaf = FALSE, is.right = is.right )
+                                       node <- Node(id = id, parent = p.id, S = df, leaf = FALSE, is.right = is.right , equation = formula("l ~ ."))
 
                                        node$is.pure(cut.off)
                                        if (!node$leaf) {

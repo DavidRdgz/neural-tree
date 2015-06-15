@@ -10,6 +10,7 @@ Node <- setRefClass(Class = "Node",
                                   label   = "character",
                                   leaf    = "logical",
                                   is.right= "character",
+                                  equation= "formula",
                                   S       = "data.frame",
                                   net     = "list",
                                   L       = "data.frame",
@@ -23,7 +24,8 @@ Node <- setRefClass(Class = "Node",
                                    },
                                    is.pure = function(cutoff, ...){
                                        args <- list(...)
-                                       tble <- sort(table(S$l), decreasing = TRUE)
+                                       #tble <- sort(table(S$l), decreasing = TRUE)
+                                       tble <- sort(table(S[,get.lhs(equation)]), decreasing = TRUE)
                                        e    <- entropy.empirical(tble, unit = "log2")
 
                                        # Check if 's' is worth splitting
@@ -35,21 +37,30 @@ Node <- setRefClass(Class = "Node",
                                    split = function(...) {
                                        args <- list(...)
 
-                                       lvls      <- levels(S$l)
-                                       classj    <- lapply(lvls, function(x) S$l == x)
+                                       #lvls      <- levels(S$l)
+                                       lvls      <- levels(S[,get.lhs(equation)])
+                                       #classj    <- lapply(lvls, function(x) S$l == x)
+                                       classj    <- lapply(lvls, function(x) S[,get.lhs(equation)] == x)
                                        r.p <- sapply(classj, function(x) sum(x)/length(x))
 
                                        my.grid <- expand.grid(.decay = c(0.5, 0.1), .size = c(1,2,3))
 
                                        # fit neural net and get predictions per class
-                                       tune.params <- train(S[, !names(S) %in% c("l")], S$l,
+                                       #tune.params <- train(S[, !names(S) %in% c("l")], S$l,
+                                       #                 method = "nnet",
+                                       #                 preProcess = "range", 
+                                       #                 tuneGrid = my.grid,
+                                       #                 tuneLength = 2,
+                                       #                 trace = FALSE,
+                                       #                 maxit = 100) 
+                                       
+                                       tune.params <- train(S[, names(S) %in% get.rhs(equation)], S[,get.lhs(equation)],
                                                         method = "nnet",
                                                         preProcess = "range", 
                                                         tuneGrid = my.grid,
                                                         tuneLength = 2,
                                                         trace = FALSE,
                                                         maxit = 100) 
-                                       
                                        net.tmp <- nnet(l ~ . , data = S[sample(nrow(S)),], size = tune.params$bestTune$size , rang = .1, decay = tune.params$bestTune$decay, maxit = 400, trace = FALSE)
                                        #net.tmp <- nnet(l ~ . , data = S[sample(nrow(S)),], size = 2 , trace = FALSE)
 
@@ -63,7 +74,7 @@ Node <- setRefClass(Class = "Node",
 
                                        r.p <- sapply(classj, function(x) sum(x)/length(x))
                                        
-                                       e <- entropy.empirical(table(S$l))
+                                       e <- entropy.empirical(table(S[, get.lhs(equation)]))
                                        d.e <- e - (1-r.p)*e.l +  r.p*e.r
                                        names(d.e) <- lvls
                                        
@@ -73,11 +84,9 @@ Node <- setRefClass(Class = "Node",
                                        R.tmp <- droplevels(S[pred == right.candidate, ])
                                        L.tmp <- droplevels(S[pred != right.candidate, ])
 
-
-                                        #temporary pca
+                                       #temporary pca
                                        #R.tmp <- do.pca(R.tmp)
                                        #L.tmp <- do.pca(L.tmp)
-
                                        
                                        label <<- right.candidate
                                        net   <<- list(net.tmp)
@@ -92,16 +101,34 @@ Node <- setRefClass(Class = "Node",
                                    )
                     )
 
-
 do.pca <- function(d...) {
-
-
     x.train <- d[, !names(d) %in% c("l")]
     pr.d <- prcomp(x.train, scale = TRUE)
     x.train <- predict(pr.d, x.train)
     x.train <- round(x.train, 4)
     d <- cbind(as.data.frame(x.train),"l"= d$l)
     d
-
-
 }
+
+get.lhs <- function(fo, ...) {
+    d.vars <- attr(terms(fo), "term.labels")
+    t.vars <- all.vars(fo)
+    t.vars[!t.vars %in% d.vars]
+}
+
+get.rhs <- function(fo, ...) {
+    attr(terms(fo), "term.labels")
+}
+
+choose.cols <- function(cols, n = length(cols), ...) {
+    if (n == length(cols)) {
+       cols 
+    } else {
+       cols[sample(length(cols), n)] 
+    }
+}
+
+formula = formula("Y ~ X1 + X2 + X3")
+mf <- model.frame(formula=formula, data=data)
+x <- model.matrix(attr(mf, "terms"), data=mf)
+y <- model.response(mf)
